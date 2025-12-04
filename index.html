@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Support Service</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hidden-section { display: none; }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="p-4">
+
+    <div id="loading" class="text-center mt-10">กำลังโหลด...</div>
+
+    <div id="reportSection" class="hidden-section max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-bold mb-4 text-red-600">🚨 แจ้งปัญหา IT</h2>
+        <form onsubmit="submitForm(event, 'Report')">
+            <label class="block mb-2">ชื่อผู้แจ้ง: <input type="text" id="r_name" class="w-full border p-2 rounded" readonly></label>
+            <label class="block mb-2">ปัญหาเกี่ยวกับ:
+                <select id="r_category" class="w-full border p-2 rounded" required>
+                    <option value="Hardware">Hardware (คอม/ปริ้นเตอร์)</option>
+                    <option value="Software">Software (โปรแกรม/Windows)</option>
+                    <option value="Network">Network/Internet</option>
+                    <option value="Peripherals">อุปกรณ์ต่อพ่วงอื่นๆ</option>
+                </select>
+            </label>
+            <label class="block mb-2">แผนก/ฝ่าย: <input type="text" id="r_dept" class="w-full border p-2 rounded" required></label>
+            <label class="block mb-2">อาการโดยละเอียด: <textarea id="r_details" class="w-full border p-2 rounded" rows="3" required></textarea></label>
+            <button type="submit" class="w-full bg-red-600 text-white p-3 rounded font-bold hover:bg-red-700">แจ้งซ่อม</button>
+        </form>
+    </div>
+
+    <div id="borrowSection" class="hidden-section max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-bold mb-4 text-blue-600">📦 ยืมอุปกรณ์</h2>
+        <form onsubmit="submitForm(event, 'Borrow')">
+            <label class="block mb-2">ชื่อผู้ยืม: <input type="text" id="b_name" class="w-full border p-2 rounded" readonly></label>
+            <label class="block mb-2">ต้องการยืม: <input type="text" id="b_item" class="w-full border p-2 rounded" placeholder="เช่น โปรเจคเตอร์" required></label>
+            <label class="block mb-2">แผนก/ฝ่าย: <input type="text" id="b_dept" class="w-full border p-2 rounded" required></label>
+            <label class="block mb-2">วันที่/เวลาที่ใช้: <input type="datetime-local" id="b_date" class="w-full border p-2 rounded" required></label>
+            <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded font-bold hover:bg-blue-700">แจ้งยืม</button>
+        </form>
+    </div>
+
+    <div id="otherSection" class="hidden-section max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-bold mb-4 text-green-600">📝 เรื่องอื่นๆ</h2>
+        <form onsubmit="submitForm(event, 'Other')">
+            <label class="block mb-2">ชื่อผู้แจ้ง: <input type="text" id="o_name" class="w-full border p-2 rounded" readonly></label>
+            <label class="block mb-2">เรื่องที่แจ้ง: <input type="text" id="o_topic" class="w-full border p-2 rounded" required></label>
+            <label class="block mb-2">แผนก/ฝ่าย: <input type="text" id="o_dept" class="w-full border p-2 rounded" required></label>
+            <label class="block mb-2">รายละเอียด: <textarea id="o_details" class="w-full border p-2 rounded" rows="3" required></textarea></label>
+            <button type="submit" class="w-full bg-green-600 text-white p-3 rounded font-bold hover:bg-green-700">ส่งเรื่อง</button>
+        </form>
+    </div>
+
+    <div id="statusSection" class="hidden-section max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-bold mb-4 text-purple-600">🔍 ติดตามสถานะ</h2>
+        <div id="statusList" class="space-y-3">กำลังโหลดข้อมูล...</div>
+        <button onclick="liff.closeWindow()" class="mt-4 w-full bg-gray-500 text-white p-2 rounded">ปิดหน้าต่าง</button>
+    </div>
+
+    <div id="successSection" class="hidden-section text-center mt-20">
+        <svg class="w-20 h-20 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <h2 class="text-2xl font-bold mt-4">ส่งเรื่องเรียบร้อยแล้ว</h2>
+        <p class="text-gray-600">กำลังปิดหน้าต่างอัตโนมัติ...</p>
+    </div>
+
+    <script>
+        const LIFF_ID = "ใส่_LIFF_ID_ของคุณ"; 
+        const GAS_URL = "ใส่_WEB_APP_URL_จาก_APPS_SCRIPT";
+
+        async function main() {
+            await liff.init({ liffId: LIFF_ID });
+            if (!liff.isLoggedIn()) {
+                liff.login();
+                return;
+            }
+            
+            const profile = await liff.getProfile();
+            const urlParams = new URLSearchParams(window.location.search);
+            const mode = urlParams.get('mode');
+
+            document.getElementById('loading').style.display = 'none';
+
+            // Auto fill Name
+            ['r_name', 'b_name', 'o_name'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.value = profile.displayName;
+            });
+
+            if (mode === 'report') document.getElementById('reportSection').style.display = 'block';
+            else if (mode === 'borrow') document.getElementById('borrowSection').style.display = 'block';
+            else if (mode === 'other') document.getElementById('otherSection').style.display = 'block';
+            else if (mode === 'status') {
+                document.getElementById('statusSection').style.display = 'block';
+                loadStatus(profile.userId);
+            }
+        }
+
+        async function submitForm(e, type) {
+            e.preventDefault();
+            const profile = await liff.getProfile();
+            let payload = {
+                userId: profile.userId,
+                displayName: profile.displayName,
+                type: type,
+                department: '', details: '', category: ''
+            };
+
+            if(type === 'Report') {
+                payload.category = document.getElementById('r_category').value;
+                payload.department = document.getElementById('r_dept').value;
+                payload.details = document.getElementById('r_details').value;
+            } else if (type === 'Borrow') {
+                payload.category = document.getElementById('b_item').value;
+                payload.department = document.getElementById('b_dept').value;
+                payload.details = "ใช้วันที่: " + document.getElementById('b_date').value;
+            } else if (type === 'Other') {
+                payload.category = document.getElementById('o_topic').value;
+                payload.department = document.getElementById('o_dept').value;
+                payload.details = document.getElementById('o_details').value;
+            }
+
+            // Show Loading
+            // Send to GAS
+            await fetch(GAS_URL, {
+                method: 'POST',
+                mode: 'no-cors', // Important for GAS
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            // Show Success & Close
+            document.querySelectorAll('div').forEach(d => d.style.display = 'none');
+            document.getElementById('successSection').style.display = 'block';
+            setTimeout(() => { liff.closeWindow(); }, 3000);
+        }
+
+        async function loadStatus(userId) {
+            const res = await fetch(`${GAS_URL}?userId=${userId}`);
+            const data = await res.json();
+            const list = document.getElementById('statusList');
+            list.innerHTML = '';
+            
+            if(data.length === 0) {
+                list.innerHTML = '<p class="text-center text-gray-500">ไม่พบรายการที่รอดำเนินการ</p>';
+                return;
+            }
+
+            data.forEach(item => {
+                let color = item.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800';
+                let statusText = item.status === 'Pending' ? 'รอรับเรื่อง' : 'กำลังดำเนินการ';
+                
+                list.innerHTML += `
+                    <div class="border p-3 rounded flex justify-between items-center bg-white">
+                        <div>
+                            <div class="font-bold">${item.ticketId}</div>
+                            <div class="text-sm text-gray-600">${item.type}</div>
+                        </div>
+                        <span class="px-2 py-1 rounded text-xs font-bold ${color}">${statusText}</span>
+                    </div>
+                `;
+            });
+        }
+
+        main();
+    </script>
+</body>
+</html>
